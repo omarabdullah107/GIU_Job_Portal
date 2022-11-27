@@ -1,0 +1,183 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using System.Web.Configuration;
+using System.Data;
+using System.Data.SqlClient;
+using System.Drawing;
+
+namespace Giu_Job_Portal
+{
+    public partial class HomePage : System.Web.UI.Page
+    {
+
+
+        protected void Page_Load(object sender, EventArgs e) { }
+
+
+
+        protected void showJobsMethod(object sender, EventArgs e)
+        {
+            searchNav.Visible = false;
+            searchJ.Visible = false;
+            jobShow.Visible = false;
+
+            string connSTR = WebConfigurationManager.ConnectionStrings["Giu_Job_Portal"].ToString();
+
+            SqlConnection conn = new SqlConnection(connSTR);
+            SqlCommand Jobs = new SqlCommand("ShowJobs", conn);
+            Jobs.CommandType = CommandType.StoredProcedure;
+            conn.Open();
+
+            SqlDataReader rdr = Jobs.ExecuteReader(CommandBehavior.CloseConnection);
+            GridView jobs = new GridView();
+            jobs.DataSource = rdr;
+            jobs.DataBind();
+            jobShow.Controls.Add(jobs);
+            jobs.CssClass = "cssgridview";
+
+            jobShow.Visible = true;
+        }
+        protected void showEmpsMethod(object sender, EventArgs e)
+        {
+            searchNav.Visible = false;
+            searchJ.Visible = false;
+            jobShow.Visible = false;
+
+            string connSTR = WebConfigurationManager.ConnectionStrings["Giu_Job_Portal"].ToString();
+
+            SqlConnection conn = new SqlConnection(connSTR);
+            SqlCommand Emps = new SqlCommand("ShowEmployers", conn);
+            Emps.CommandType = CommandType.StoredProcedure;
+            conn.Open();
+            SqlDataReader rdr = Emps.ExecuteReader(CommandBehavior.CloseConnection);
+            GridView Emp = new GridView();
+            Emp.DataSource = rdr;
+            Emp.DataBind();
+            emps.Controls.Add(Emp);
+            Emp.CssClass = "cssgridview";
+
+            emps.Visible = true;
+
+        }
+        protected void loginRedirectMethod(object sender, EventArgs e)
+        {
+            log.Visible = true;
+            showEmps.Visible = false;
+            searchJ.Visible = false;
+            jobShow.Visible = false;
+        }
+
+        protected void searchImgButton(object sender, EventArgs e)
+        {
+            searchNav.Visible = true;
+        }
+
+        protected void searchJobGV(object sender, EventArgs e)
+        {
+            emps.Visible = false;
+            jobShow.Visible = false;
+
+            string connSTR = WebConfigurationManager.ConnectionStrings["Giu_Job_Portal"].ToString();
+
+            SqlConnection conn = new SqlConnection(connSTR);
+            SqlCommand Sjobs = new SqlCommand("JobsSearch", conn);
+            Sjobs.CommandType = CommandType.StoredProcedure;
+
+            String searchFac = searchFaculty.Text;
+            int searchSem;
+            if (searchSemeter.Text != "Choose A Semester")
+                searchSem = int.Parse(searchSemeter.Text);
+            else
+                searchSem = -1;
+
+
+            Sjobs.Parameters.Add(new SqlParameter("@allowed_faculty", searchFac));
+            Sjobs.Parameters.Add(new SqlParameter("@semester", searchSem));
+
+            conn.Open();
+            SqlDataReader rdr = Sjobs.ExecuteReader(CommandBehavior.CloseConnection);
+            GridView search = new GridView();
+            search.DataSource = rdr;
+            search.DataBind();
+            searchJ.Controls.Add(search);
+            search.CssClass = "cssgridview";
+
+            searchJ.Visible = true;
+        }
+        protected void registeredMethod(object sender, EventArgs e)
+        {
+            Response.Redirect("RegisterPage.aspx");
+        }
+
+        protected void loginM(Object sender, EventArgs e)
+        {
+
+
+            string connSTR = WebConfigurationManager.ConnectionStrings["Giu_Job_Portal"].ToString();
+
+            SqlConnection conn = new SqlConnection(connSTR);
+
+            String email = Email.Text;
+            String pass = passcode.Text;
+
+            SqlCommand loginProc = new SqlCommand("UserLogin", conn);
+            loginProc.CommandType = CommandType.StoredProcedure;
+            loginProc.Parameters.Add(new SqlParameter("@email", email));
+            loginProc.Parameters.Add(new SqlParameter("@password", pass));
+
+            SqlParameter success = loginProc.Parameters.Add("@success", SqlDbType.Int);
+            SqlParameter user_id = loginProc.Parameters.Add("@user_id", SqlDbType.Int);
+
+            success.Direction = ParameterDirection.Output;
+            user_id.Direction = ParameterDirection.Output;
+
+            SqlCommand usertype = new SqlCommand("UserType", conn);
+            usertype.CommandType = CommandType.StoredProcedure;
+            usertype.Parameters.Add(new SqlParameter("@id", user_id.Value));
+
+            SqlParameter user_type = usertype.Parameters.Add("@user_type", SqlDbType.NVarChar, 50);
+
+            user_type.Direction = ParameterDirection.Output;
+            conn.Open();
+            usertype.ExecuteNonQuery();
+            loginProc.ExecuteNonQuery();
+            conn.Close();
+
+            if (!(bool)success.Value)
+            {
+                Email.BorderColor = Color.Red;
+                passcode.BorderColor = Color.Red;
+
+                loginSuccess.Text = "LOGIN NOT SUCCESSFUL! PLEASE ENTER VALID DATA";
+                loginSuccess.Visible = true;
+            }
+            else
+            {
+                loginSuccess.Text = "LOGIN SUCCESSFUL!";
+                loginSuccess.Visible = true;
+                Session["IDs"] = user_id.Value;
+
+
+                if (user_type.Value.Equals("Student"))
+                    Response.Redirect("Student Profile.aspx");
+                else if (user_type.Value.Equals("Employer"))
+                    Response.Redirect("Employer.aspx");
+                else if (user_type.Value.Equals("Academic Advisor"))
+                    Response.Redirect("About.aspx");
+                else if (user_type.Value.Equals("Career Office Coordinator"))
+                    Response.Redirect("Student profile.aspx");
+                else if (user_type.Value.Equals("Admin"))
+                    Response.Redirect("Student profile.aspx");
+                else if (user_type.Value.Equals("Faculty representative"))
+                    Response.Redirect("Student profile.aspx");
+            }
+        }
+    }
+}
+   
+
+    
